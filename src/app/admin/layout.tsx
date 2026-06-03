@@ -1,17 +1,24 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import AdminSidebar from "@/components/AdminSidebar";
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptions).catch((error) => {
+    console.error("Failed to read admin session", error);
+    return null;
+  });
 
   if (!session) {
-    redirect("/login");
+    const pathname = headers().get("x-invoke-path") || "/admin";
+    redirect(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
   }
 
   return (
