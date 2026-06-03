@@ -3,6 +3,9 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
 
+export const authSecret =
+  process.env.NEXTAUTH_SECRET || "default_secret_for_dev_only";
+
 const fallbackUsers = [
   {
     id: "default-admin",
@@ -94,5 +97,5 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
   },
-  secret: process.env.NEXTAUTH_SECRET || "default_secret_for_dev_only",
+  secret: authSecret,
 };
