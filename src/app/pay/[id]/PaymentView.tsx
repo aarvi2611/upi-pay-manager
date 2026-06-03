@@ -1,7 +1,7 @@
 "use client";
 
 import { QRCodeSVG } from "qrcode.react";
-import { CheckCircle, AlertCircle, Copy, Check } from "lucide-react";
+import { AlertCircle, Check, CheckCircle, Copy, CreditCard, ExternalLink, Smartphone } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function PaymentView({ transaction, businessProfile, upiUrl }: any) {
@@ -36,6 +36,13 @@ export default function PaymentView({ transaction, businessProfile, upiUrl }: an
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const upiApps = [
+    { label: "UPI App", icon: Smartphone, className: "bg-green-600 hover:bg-green-700 text-white" },
+    { label: "Google Pay", icon: CreditCard, className: "bg-blue-600 hover:bg-blue-700 text-white" },
+    { label: "PhonePe", icon: CreditCard, className: "bg-purple-600 hover:bg-purple-700 text-white" },
+    { label: "Paytm", icon: CreditCard, className: "bg-sky-600 hover:bg-sky-700 text-white" },
+  ];
 
   if (currentTransaction.status === "PAID") {
     return (
@@ -97,6 +104,22 @@ export default function PaymentView({ transaction, businessProfile, upiUrl }: an
         <p className="text-4xl font-extrabold">₹{currentTransaction.amount.toFixed(2)}</p>
       </div>
 
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {upiApps.map((app) => {
+          const Icon = app.icon;
+          return (
+            <a
+              key={app.label}
+              href={upiUrl}
+              className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-lg px-3 py-2 text-center text-xs font-semibold transition-colors ${app.className}`}
+            >
+              <Icon size={18} />
+              <span>{app.label}</span>
+            </a>
+          );
+        })}
+      </div>
+
       <div className="flex flex-col items-center mb-8">
         <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 inline-block">
           <QRCodeSVG
@@ -127,9 +150,9 @@ export default function PaymentView({ transaction, businessProfile, upiUrl }: an
 
         <a
           href={upiUrl}
-          className="flex items-center justify-center w-full py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors md:hidden"
+          className="flex items-center justify-center gap-2 w-full py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors"
         >
-          Pay Now on Mobile
+          <ExternalLink size={18} /> Open Payment Link
         </a>
       </div>
 
