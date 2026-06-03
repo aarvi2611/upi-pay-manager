@@ -10,13 +10,15 @@ function initFirebaseAdmin() {
   const key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
   if (!key) throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY is not set');
 
-  // FIREBASE_SERVICE_ACCOUNT_KEY should be base64-encoded JSON
   let serviceAccountJson: any;
   try {
-    const decoded = Buffer.from(key, 'base64').toString('utf8');
-    serviceAccountJson = JSON.parse(decoded);
+    const serviceAccount = key.trim().startsWith('{')
+      ? key
+      : Buffer.from(key, 'base64').toString('utf8');
+
+    serviceAccountJson = JSON.parse(serviceAccount);
   } catch (e) {
-    throw new Error('Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY: ' + e);
+    throw new Error('Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY as JSON or base64 JSON: ' + e);
   }
 
   app = admin.initializeApp({
