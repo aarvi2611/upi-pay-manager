@@ -57,11 +57,15 @@ export async function PATCH(
 
   try {
     const body = await req.json();
-    const { status, utrNumber } = body;
+    const { status, utrNumber, customerName, customerPhone, amount, purpose } = body;
     const updatedAt = new Date();
     const updateData = {
-      status,
-      ...(utrNumber && { utrNumber }),
+      ...(status && { status }),
+      ...(utrNumber !== undefined && { utrNumber: utrNumber || null }),
+      ...(customerName !== undefined && { customerName }),
+      ...(customerPhone !== undefined && { customerPhone: customerPhone || null }),
+      ...(amount !== undefined && { amount: parseFloat(amount) || 0 }),
+      ...(purpose !== undefined && { purpose: purpose || null }),
       ...(status === "PAID" && { paymentDate: updatedAt.toISOString() }),
       updatedAt: updatedAt.toISOString(),
     };
@@ -86,8 +90,12 @@ export async function PATCH(
     const transaction = await prisma.transaction.update({
       where: { id: params.id },
       data: {
-        status,
-        ...(utrNumber && { utrNumber }),
+        ...(status && { status }),
+        ...(utrNumber !== undefined && { utrNumber: utrNumber || null }),
+        ...(customerName !== undefined && { customerName }),
+        ...(customerPhone !== undefined && { customerPhone: customerPhone || null }),
+        ...(amount !== undefined && { amount: parseFloat(amount) || 0 }),
+        ...(purpose !== undefined && { purpose: purpose || null }),
         ...(status === "PAID" && { paymentDate: new Date() }),
       },
     });
@@ -112,4 +120,37 @@ export async function PATCH(
     }
     return new NextResponse("Internal Error", { status: 500 });
   }
+}
+
+export async function DELETE(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session) return new NextResponse("Unauthorized", { status: 401 });
+
+  let deleted = false;
+
+  try {
+    const db = getFirestore();
+    await db.collection('transactions').doc(params.id).delete();
+    deleted = true;
+  } catch (error) {
+    console.error("Firestore transaction delete failed", error);
+  }
+
+  try {
+    await prisma.transaction.delete({
+      where: { id: params.id },
+    });
+    deleted = true;
+  } catch (error) {
+    console.error("Prisma transaction delete failed", error);
+  }
+
+  if (!deleted) {
+    return new NextResponse("Transaction not found", { status: 404 });
+  }
+
+  return NextResponse.json({ success: true });
 }
