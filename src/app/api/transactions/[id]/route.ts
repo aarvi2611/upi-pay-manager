@@ -3,8 +3,19 @@ import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getFirestore } from '@/lib/firebaseAdmin';
+import { toDate } from "@/lib/date";
 
 export const dynamic = "force-dynamic";
+
+function serializeTransaction(transaction: any) {
+  return {
+    ...transaction,
+    amount: parseFloat(transaction.amount) || 0,
+    paymentDate: transaction.paymentDate ? toDate(transaction.paymentDate).toISOString() : null,
+    createdAt: transaction.createdAt ? toDate(transaction.createdAt).toISOString() : null,
+    updatedAt: transaction.updatedAt ? toDate(transaction.updatedAt).toISOString() : null,
+  };
+}
 
 export async function GET(
   req: Request,
@@ -15,10 +26,10 @@ export async function GET(
     const doc = await db.collection('transactions').doc(params.id).get();
 
     if (doc.exists) {
-      return NextResponse.json({
+      return NextResponse.json(serializeTransaction({
         id: doc.id,
         ...doc.data(),
-      });
+      }));
     }
   } catch (err) {
     console.error('Firestore transaction read failed', err);
@@ -29,7 +40,7 @@ export async function GET(
       where: { id: params.id },
     });
 
-    if (transaction) return NextResponse.json(transaction);
+    if (transaction) return NextResponse.json(serializeTransaction(transaction));
   } catch (error) {
     console.error("Prisma transaction read failed", error);
   }

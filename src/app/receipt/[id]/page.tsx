@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { getFirestore } from "@/lib/firebaseAdmin";
+import { toDate } from "@/lib/date";
 import { notFound } from "next/navigation";
 import ReceiptView from "./ReceiptView";
 
@@ -32,6 +33,14 @@ export default async function ReceiptPage({ params }: { params: { id: string } }
   }
 
   if (!transaction || transaction.status !== "PAID") notFound();
+
+  transaction = {
+    ...transaction,
+    amount: parseFloat(transaction.amount) || 0,
+    paymentDate: transaction.paymentDate ? toDate(transaction.paymentDate).toISOString() : null,
+    createdAt: transaction.createdAt ? toDate(transaction.createdAt).toISOString() : null,
+    updatedAt: transaction.updatedAt ? toDate(transaction.updatedAt).toISOString() : null,
+  };
 
   if (!businessProfile) {
     businessProfile = await prisma.businessProfile.findFirst().catch((error) => {

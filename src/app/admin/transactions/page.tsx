@@ -2,6 +2,7 @@ import TransactionList from "./TransactionList";
 import { getFirestore } from '@/lib/firebaseAdmin';
 import { getPublicBaseUrl } from "@/lib/publicUrl";
 import { headers } from "next/headers";
+import { toDate } from "@/lib/date";
 
 export const dynamic = "force-dynamic";
 
@@ -24,9 +25,9 @@ export default async function TransactionsPage() {
         purpose: data.purpose || null,
         status: data.status || 'PENDING',
         utrNumber: data.utrNumber || null,
-        paymentDate: data.paymentDate ? new Date(data.paymentDate) : null,
-        createdAt: data.createdAt ? new Date(data.createdAt) : null,
-        updatedAt: data.updatedAt ? new Date(data.updatedAt) : null,
+        paymentDate: data.paymentDate ? toDate(data.paymentDate) : null,
+        createdAt: data.createdAt ? toDate(data.createdAt) : null,
+        updatedAt: data.updatedAt ? toDate(data.updatedAt) : null,
       };
     });
   } catch (err) {

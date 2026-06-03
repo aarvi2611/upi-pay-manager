@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma";
 import { format } from "date-fns";
 import { Activity, CreditCard, DollarSign, Users } from "lucide-react";
 import { getFirestore } from "@/lib/firebaseAdmin";
+import { toDate } from "@/lib/date";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ async function getDashboardTransactions() {
         customerName: data.customerName || "",
         amount: parseFloat(data.amount) || 0,
         status: data.status || "PENDING",
-        createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+        createdAt: toDate(data.createdAt),
       };
     });
   } catch (error) {
@@ -46,7 +47,7 @@ export default async function AdminDashboard() {
 
   const today = new Date();
   const todayTransactions = transactions.filter(t => {
-    const txDate = new Date(t.createdAt);
+    const txDate = toDate(t.createdAt);
     return txDate.getDate() === today.getDate() &&
            txDate.getMonth() === today.getMonth() &&
            txDate.getFullYear() === today.getFullYear();
@@ -112,7 +113,7 @@ export default async function AdminDashboard() {
                   <td className="px-6 py-4 font-medium">{tx.orderId}</td>
                   <td className="px-6 py-4">{tx.customerName}</td>
                   <td className="px-6 py-4">₹{tx.amount.toFixed(2)}</td>
-                  <td className="px-6 py-4">{format(new Date(tx.createdAt), 'dd MMM yyyy')}</td>
+                  <td className="px-6 py-4">{format(toDate(tx.createdAt), 'dd MMM yyyy')}</td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                       tx.status === 'PAID' ? 'bg-green-100 text-green-700' :
