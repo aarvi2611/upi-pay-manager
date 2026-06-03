@@ -1,16 +1,49 @@
 import prisma from "@/lib/prisma";
+import { getFirestore } from "@/lib/firebaseAdmin";
 import { notFound } from "next/navigation";
 import PaymentView from "./PaymentView";
 
 export default async function PaymentPage({ params }: { params: { id: string } }) {
-  const transaction = await prisma.transaction.findUnique({
-    where: { id: params.id }
-  });
+  let transaction: any = null;
+  let businessProfile: any = null;
+
+  try {
+    const db = getFirestore();
+    const transactionDoc = await db.collection("transactions").doc(params.id).get();
+    if (transactionDoc.exists) {
+      transaction = { id: transactionDoc.id, ...transactionDoc.data() };
+    }
+
+    const profileDoc = await db.collection("settings").doc("business-profile").get();
+    if (profileDoc.exists) {
+      businessProfile = profileDoc.data();
+    }
+  } catch (error) {
+    console.error("Failed to load Firestore payment data", error);
+  }
+
+  if (!transaction) {
+    transaction = await prisma.transaction.findUnique({
+      where: { id: params.id }
+    }).catch((error) => {
+      console.error("Failed to load Prisma transaction", error);
+      return null;
+    });
+  }
 
   if (!transaction) notFound();
 
-  const businessProfile = await prisma.businessProfile.findFirst();
-  if (!businessProfile) notFound();
+  if (!businessProfile) {
+    businessProfile = await prisma.businessProfile.findFirst().catch((error) => {
+      console.error("Failed to load Prisma business profile", error);
+      return null;
+    });
+  }
+
+  businessProfile = businessProfile || {
+    name: "My Store",
+    upiId: "merchant@upi",
+  };
 
   // Construct UPI URL string
   // upi://pay?pa=upiId&pn=BusinessName&tr=orderId&tn=purpose&am=amount&cu=INR

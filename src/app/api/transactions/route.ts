@@ -13,33 +13,51 @@ export async function POST(req: Request) {
     const { customerName, customerPhone, amount, purpose } = body;
 
     const orderId = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const now = new Date();
+    const transaction = {
+      id: `tx-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      orderId,
+      customerName,
+      customerPhone: customerPhone || null,
+      amount: parseFloat(amount),
+      purpose: purpose || null,
+      status: "PENDING",
+      utrNumber: null,
+      paymentDate: null,
+      proofUrl: null,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    };
 
-    const transaction = await prisma.transaction.create({
-      data: {
-        orderId,
-        customerName,
-        customerPhone,
-        amount: parseFloat(amount),
-        purpose,
-        status: "PENDING",
-      },
-    });
-
-    // Mirror to Firestore (best-effort)
     try {
       const db = getFirestore();
       await db.collection('transactions').doc(transaction.id).set({
         ...transaction,
-        createdAt: transaction.createdAt.toISOString(),
-        updatedAt: transaction.updatedAt.toISOString(),
         userEmail: session.user?.email || null,
       });
+
+      return NextResponse.json(transaction);
     } catch (err) {
-      // swallow Firestore errors to avoid failing the request
       console.error('Firestore write failed', err);
     }
 
-    return NextResponse.json(transaction);
+    try {
+      const prismaTransaction = await prisma.transaction.create({
+        data: {
+          orderId,
+          customerName,
+          customerPhone: customerPhone || null,
+          amount: parseFloat(amount),
+          purpose: purpose || null,
+          status: "PENDING",
+        },
+      });
+
+      return NextResponse.json(prismaTransaction);
+    } catch (error) {
+      console.error("Prisma transaction create failed", error);
+      return NextResponse.json(transaction);
+    }
   } catch (error) {
     return new NextResponse("Internal Error", { status: 500 });
   }

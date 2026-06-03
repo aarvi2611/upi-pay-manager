@@ -14,6 +14,30 @@ export async function PATCH(
   try {
     const body = await req.json();
     const { status, utrNumber } = body;
+    const updatedAt = new Date();
+    const updateData = {
+      status,
+      ...(utrNumber && { utrNumber }),
+      ...(status === "PAID" && { paymentDate: updatedAt.toISOString() }),
+      updatedAt: updatedAt.toISOString(),
+    };
+
+    try {
+      const db = getFirestore();
+      const docRef = db.collection('transactions').doc(params.id);
+      const doc = await docRef.get();
+
+      if (doc.exists) {
+        await docRef.set(updateData, { merge: true });
+        return NextResponse.json({
+          id: doc.id,
+          ...doc.data(),
+          ...updateData,
+        });
+      }
+    } catch (err) {
+      console.error('Firestore update failed', err);
+    }
 
     const transaction = await prisma.transaction.update({
       where: { id: params.id },
