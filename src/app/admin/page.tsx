@@ -1,14 +1,40 @@
 import prisma from "@/lib/prisma";
 import { format } from "date-fns";
 import { Activity, CreditCard, DollarSign, Users } from "lucide-react";
+import { getFirestore } from "@/lib/firebaseAdmin";
 
-export default async function AdminDashboard() {
-  const transactions = await prisma.transaction.findMany({
+export const dynamic = "force-dynamic";
+
+async function getDashboardTransactions() {
+  try {
+    const db = getFirestore();
+    const snap = await db.collection("transactions").orderBy("createdAt", "desc").get();
+
+    return snap.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        orderId: data.orderId || "",
+        customerName: data.customerName || "",
+        amount: parseFloat(data.amount) || 0,
+        status: data.status || "PENDING",
+        createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+      };
+    });
+  } catch (error) {
+    console.error("Failed to load Firestore dashboard transactions", error);
+  }
+
+  return prisma.transaction.findMany({
     orderBy: { createdAt: "desc" },
   }).catch((error) => {
-    console.error("Failed to load dashboard transactions", error);
+    console.error("Failed to load Prisma dashboard transactions", error);
     return [];
   });
+}
+
+export default async function AdminDashboard() {
+  const transactions = await getDashboardTransactions();
   
   const totalReceived = transactions
     .filter(t => t.status === "PAID")
