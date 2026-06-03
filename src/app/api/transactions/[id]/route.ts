@@ -4,6 +4,39 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getFirestore } from '@/lib/firebaseAdmin';
 
+export const dynamic = "force-dynamic";
+
+export async function GET(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const db = getFirestore();
+    const doc = await db.collection('transactions').doc(params.id).get();
+
+    if (doc.exists) {
+      return NextResponse.json({
+        id: doc.id,
+        ...doc.data(),
+      });
+    }
+  } catch (err) {
+    console.error('Firestore transaction read failed', err);
+  }
+
+  try {
+    const transaction = await prisma.transaction.findUnique({
+      where: { id: params.id },
+    });
+
+    if (transaction) return NextResponse.json(transaction);
+  } catch (error) {
+    console.error("Prisma transaction read failed", error);
+  }
+
+  return new NextResponse("Not Found", { status: 404 });
+}
+
 export async function PATCH(
   req: Request,
   { params }: { params: { id: string } }

@@ -2,10 +2,34 @@
 
 import { QRCodeSVG } from "qrcode.react";
 import { CheckCircle, AlertCircle, Copy, Check } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function PaymentView({ transaction, businessProfile, upiUrl }: any) {
   const [copied, setCopied] = useState(false);
+  const [currentTransaction, setCurrentTransaction] = useState(transaction);
+
+  useEffect(() => {
+    if (currentTransaction.status !== "PENDING") return;
+
+    const refreshTransaction = async () => {
+      try {
+        const res = await fetch(`/api/transactions/${transaction.id}`, {
+          cache: "no-store",
+        });
+        if (!res.ok) return;
+
+        const updated = await res.json();
+        setCurrentTransaction(updated);
+      } catch (error) {
+        console.error("Failed to refresh transaction status", error);
+      }
+    };
+
+    const intervalId = window.setInterval(refreshTransaction, 3000);
+    refreshTransaction();
+
+    return () => window.clearInterval(intervalId);
+  }, [currentTransaction.status, transaction.id]);
 
   const copyUpiId = () => {
     navigator.clipboard.writeText(businessProfile.upiId);
@@ -13,34 +37,34 @@ export default function PaymentView({ transaction, businessProfile, upiUrl }: an
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (transaction.status === "PAID") {
+  if (currentTransaction.status === "PAID") {
     return (
       <div className="bg-white p-8 rounded-2xl shadow-lg max-w-md w-full text-center border-t-8 border-green-500">
         <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
           <CheckCircle size={32} />
         </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Successful!</h2>
-        <p className="text-gray-500 mb-6">Thank you, {transaction.customerName}. Your payment has been received.</p>
-        
+        <p className="text-gray-500 mb-6">Thank you, {currentTransaction.customerName}. Your payment has been received.</p>
+
         <div className="bg-gray-50 rounded-xl p-4 mb-6 text-left space-y-3">
           <div className="flex justify-between">
             <span className="text-gray-500 text-sm">Amount Paid</span>
-            <span className="font-bold text-gray-900">₹{transaction.amount.toFixed(2)}</span>
+            <span className="font-bold text-gray-900">₹{currentTransaction.amount.toFixed(2)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-500 text-sm">Order ID</span>
-            <span className="font-medium text-gray-900">{transaction.orderId}</span>
+            <span className="font-medium text-gray-900">{currentTransaction.orderId}</span>
           </div>
-          {transaction.utrNumber && (
+          {currentTransaction.utrNumber && (
             <div className="flex justify-between">
               <span className="text-gray-500 text-sm">UTR/Ref No.</span>
-              <span className="font-medium text-gray-900">{transaction.utrNumber}</span>
+              <span className="font-medium text-gray-900">{currentTransaction.utrNumber}</span>
             </div>
           )}
         </div>
 
-        <a 
-          href={`/receipt/${transaction.id}`} 
+        <a
+          href={`/receipt/${currentTransaction.id}`}
           className="block w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
         >
           View Receipt
@@ -49,13 +73,13 @@ export default function PaymentView({ transaction, businessProfile, upiUrl }: an
     );
   }
 
-  if (transaction.status === "CANCELLED" || transaction.status === "FAILED") {
+  if (currentTransaction.status === "CANCELLED" || currentTransaction.status === "FAILED") {
     return (
       <div className="bg-white p-8 rounded-2xl shadow-lg max-w-md w-full text-center border-t-8 border-red-500">
         <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
           <AlertCircle size={32} />
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment {transaction.status === "CANCELLED" ? "Cancelled" : "Failed"}</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment {currentTransaction.status === "CANCELLED" ? "Cancelled" : "Failed"}</h2>
         <p className="text-gray-500 mb-6">This payment request is no longer active.</p>
       </div>
     );
@@ -70,15 +94,15 @@ export default function PaymentView({ transaction, businessProfile, upiUrl }: an
 
       <div className="bg-blue-50 text-blue-900 p-4 rounded-xl text-center mb-8">
         <p className="text-sm opacity-80 mb-1">Amount to pay</p>
-        <p className="text-4xl font-extrabold">₹{transaction.amount.toFixed(2)}</p>
+        <p className="text-4xl font-extrabold">₹{currentTransaction.amount.toFixed(2)}</p>
       </div>
 
       <div className="flex flex-col items-center mb-8">
         <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 inline-block">
-          <QRCodeSVG 
-            value={upiUrl} 
-            size={220} 
-            level="H" 
+          <QRCodeSVG
+            value={upiUrl}
+            size={220}
+            level="H"
             includeMargin={true}
           />
         </div>
@@ -93,15 +117,15 @@ export default function PaymentView({ transaction, businessProfile, upiUrl }: an
             <p className="text-xs text-gray-500">UPI ID</p>
             <p className="font-medium text-gray-900 text-sm">{businessProfile.upiId}</p>
           </div>
-          <button 
+          <button
             onClick={copyUpiId}
             className="p-2 text-gray-500 hover:text-blue-600 transition-colors bg-white rounded-md shadow-sm border border-gray-100"
           >
-            {copied ? <Check size={16} className="text-green-500"/> : <Copy size={16} />}
+            {copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
           </button>
         </div>
 
-        <a 
+        <a
           href={upiUrl}
           className="flex items-center justify-center w-full py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors md:hidden"
         >
@@ -112,22 +136,22 @@ export default function PaymentView({ transaction, businessProfile, upiUrl }: an
       <div className="mt-8 pt-6 border-t border-gray-100 text-sm text-gray-500">
         <div className="flex justify-between mb-2">
           <span>Order ID:</span>
-          <span className="font-medium text-gray-900">{transaction.orderId}</span>
+          <span className="font-medium text-gray-900">{currentTransaction.orderId}</span>
         </div>
         <div className="flex justify-between">
           <span>Customer:</span>
-          <span className="font-medium text-gray-900">{transaction.customerName}</span>
+          <span className="font-medium text-gray-900">{currentTransaction.customerName}</span>
         </div>
-        {transaction.purpose && (
+        {currentTransaction.purpose && (
           <div className="flex justify-between mt-2">
             <span>Note:</span>
-            <span className="font-medium text-gray-900 text-right truncate max-w-[200px]">{transaction.purpose}</span>
+            <span className="font-medium text-gray-900 text-right truncate max-w-[200px]">{currentTransaction.purpose}</span>
           </div>
         )}
       </div>
-      
+
       <div className="mt-6 text-center text-xs text-gray-400">
-        Status will update once the merchant verifies the payment.
+        Status will update automatically once the merchant verifies the payment.
       </div>
     </div>
   );
