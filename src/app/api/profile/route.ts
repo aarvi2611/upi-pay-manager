@@ -6,8 +6,13 @@ import { authOptions } from "@/lib/auth";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const profile = await prisma.businessProfile.findFirst();
-  return NextResponse.json(profile || {});
+  try {
+    const profile = await prisma.businessProfile.findFirst();
+    return NextResponse.json(profile || {});
+  } catch (error) {
+    console.error("Failed to load business profile", error);
+    return NextResponse.json({});
+  }
 }
 
 export async function PUT(req: Request) {

@@ -3,7 +3,12 @@ import { format } from "date-fns";
 import { Activity, CreditCard, DollarSign, Users } from "lucide-react";
 
 export default async function AdminDashboard() {
-  const transactions = await prisma.transaction.findMany();
+  const transactions = await prisma.transaction.findMany({
+    orderBy: { createdAt: "desc" },
+  }).catch((error) => {
+    console.error("Failed to load dashboard transactions", error);
+    return [];
+  });
   
   const totalReceived = transactions
     .filter(t => t.status === "PAID")
