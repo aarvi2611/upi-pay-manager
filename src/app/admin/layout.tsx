@@ -1,6 +1,5 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import AdminSidebar from "@/components/AdminSidebar";
 
@@ -17,8 +16,7 @@ export default async function AdminLayout({
   });
 
   if (!session) {
-    const pathname = headers().get("x-invoke-path") || "/admin";
-    redirect(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
+    redirect("/login?callbackUrl=/admin");
   }
 
   return (
