@@ -56,9 +56,10 @@ export default async function PaymentPage({ params }: { params: { id: string } }
   };
 
   // Construct UPI URL string
-  // upi://pay?pa=upiId&pn=BusinessName&tr=orderId&tn=purpose&am=amount&cu=INR
+  // Keep the URL simple. Some UPI apps flag direct browser links with custom transaction refs.
+  // upi://pay?pa=upiId&pn=BusinessName&tn=purpose&am=amount&cu=INR
   const buildUpiUrl = (upiId: string) =>
-    `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(businessProfile.name)}&tr=${encodeURIComponent(transaction.orderId)}&tn=${encodeURIComponent(transaction.purpose || "Payment")}&am=${transaction.amount}&cu=INR`;
+    `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(businessProfile.name)}&tn=${encodeURIComponent(transaction.purpose || `Payment ${transaction.orderId}`)}&am=${transaction.amount}&cu=INR`;
 
   const upiUrl = buildUpiUrl(businessProfile.upiId);
   const personalUpiUrl = businessProfile.personalUpiId ? buildUpiUrl(businessProfile.personalUpiId) : null;

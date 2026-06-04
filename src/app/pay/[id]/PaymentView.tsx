@@ -55,10 +55,10 @@ export default function PaymentView({ transaction, businessProfile, upiUrl, sele
   };
 
   const upiApps = [
-    { label: "UPI App", short: "UPI", className: "bg-emerald-600 text-white" },
-    { label: "Google Pay", short: "GPay", className: "border border-blue-100 bg-white text-blue-700" },
-    { label: "PhonePe", short: "Pe", className: "bg-violet-700 text-white" },
-    { label: "Paytm", short: "paytm", className: "border border-sky-100 bg-white text-sky-700" },
+    { label: "UPI App", short: "UPI", direct: true, className: "bg-emerald-600 text-white" },
+    { label: "Google Pay", short: "GPay", direct: true, className: "border border-blue-100 bg-white text-blue-700" },
+    { label: "PhonePe", short: "Pe", direct: true, className: "bg-violet-700 text-white" },
+    { label: "Paytm", short: "paytm", direct: false, className: "border border-sky-100 bg-white text-sky-700" },
   ];
   const isHighValuePayment = currentTransaction.amount >= 2000;
   const createdOn = currentTransaction.createdAt
@@ -223,19 +223,41 @@ export default function PaymentView({ transaction, businessProfile, upiUrl, sele
             </div>
 
             <div className="mt-5 grid grid-cols-4 gap-2">
-              {upiApps.map((app) => (
-                <a
-                  key={app.label}
-                  href={activeUpiUrl}
-                  title={app.label}
-                  className="flex min-h-12 items-center justify-center rounded-full border border-slate-100 bg-slate-50 text-xs font-bold text-slate-700 shadow-sm transition-colors hover:border-blue-200 hover:bg-blue-50"
-                >
+              {upiApps.map((app) => {
+                const content = (
                   <span className={`flex h-9 w-9 items-center justify-center rounded-full text-[11px] font-extrabold ${app.className}`}>
                     {app.short}
                   </span>
-                </a>
-              ))}
+                );
+
+                if (!app.direct) {
+                  return (
+                    <button
+                      key={app.label}
+                      type="button"
+                      title="Open Paytm and scan this QR"
+                      className="flex min-h-12 items-center justify-center rounded-full border border-slate-100 bg-slate-50 text-xs font-bold text-slate-700 shadow-sm"
+                    >
+                      {content}
+                    </button>
+                  );
+                }
+
+                return (
+                  <a
+                    key={app.label}
+                    href={activeUpiUrl}
+                    title={app.label}
+                    className="flex min-h-12 items-center justify-center rounded-full border border-slate-100 bg-slate-50 text-xs font-bold text-slate-700 shadow-sm transition-colors hover:border-blue-200 hover:bg-blue-50"
+                  >
+                    {content}
+                  </a>
+                );
+              })}
             </div>
+            <p className="mt-3 text-center text-xs text-slate-500">
+              Paytm users: open Paytm and scan this QR for a smoother payment.
+            </p>
 
             <div className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
               <div className="min-w-0">
@@ -261,7 +283,7 @@ export default function PaymentView({ transaction, businessProfile, upiUrl, sele
 
             {isHighValuePayment && (
               <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                If your UPI app shows a safety warning, scan this QR directly from your UPI app.
+                If any UPI app shows a safety warning, open that app and scan this QR instead of opening the browser payment link.
               </div>
             )}
           </div>
