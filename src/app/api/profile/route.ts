@@ -16,6 +16,21 @@ type ProfileInput = {
   address?: string | null;
 };
 
+async function saveProfileToPrisma(profile: ProfileInput) {
+  const existing = await prisma.businessProfile.findFirst();
+
+  if (existing) {
+    return prisma.businessProfile.update({
+      where: { id: existing.id },
+      data: profile,
+    });
+  }
+
+  return prisma.businessProfile.create({
+    data: profile,
+  });
+}
+
 export async function GET() {
   try {
     const db = getFirestore();
@@ -27,6 +42,24 @@ export async function GET() {
 
   try {
     const profile = await prisma.businessProfile.findFirst();
+    if (profile) {
+      try {
+        const db = getFirestore();
+        await db.collection("settings").doc(profileDocId).set(
+          {
+            name: profile.name,
+            upiId: profile.upiId,
+            personalUpiId: profile.personalUpiId || null,
+            phone: profile.phone || null,
+            address: profile.address || null,
+            updatedAt: profile.updatedAt.toISOString(),
+          },
+          { merge: true }
+        );
+      } catch (error) {
+        console.error("Failed to mirror Prisma business profile to Firestore", error);
+      }
+    }
     return NextResponse.json(profile || {});
   } catch (error) {
     console.error("Failed to load business profile", error);
@@ -47,6 +80,8 @@ export async function PUT(req: Request) {
       phone: body.phone || null,
       address: body.address || null,
     };
+    let savedProfile: any = profile;
+    let saved = false;
 
     try {
       const db = getFirestore();
@@ -57,31 +92,24 @@ export async function PUT(req: Request) {
         },
         { merge: true }
       );
+      saved = true;
 
-      return NextResponse.json(profile);
     } catch (error) {
       console.error("Failed to save Firestore business profile", error);
     }
 
     try {
-      const existing = await prisma.businessProfile.findFirst();
-
-      if (existing) {
-        const updated = await prisma.businessProfile.update({
-          where: { id: existing.id },
-          data: profile,
-        });
-        return NextResponse.json(updated);
-      } else {
-        const created = await prisma.businessProfile.create({
-          data: profile,
-        });
-        return NextResponse.json(created);
-      }
+      savedProfile = await saveProfileToPrisma(profile);
+      saved = true;
     } catch (error) {
       console.error("Failed to save Prisma business profile", error);
-      return NextResponse.json(profile);
     }
+
+    if (!saved) {
+      return new NextResponse("Failed to save business profile", { status: 500 });
+    }
+
+    return NextResponse.json(savedProfile);
   } catch (error) {
     return new NextResponse("Internal Error", { status: 500 });
   }

@@ -71,6 +71,7 @@ export async function PATCH(
       ...(status === "PAID" && { paymentDate: updatedAt.toISOString() }),
       updatedAt: updatedAt.toISOString(),
     };
+    let firestoreTransaction: any = null;
 
     try {
       const db = getFirestore();
@@ -79,44 +80,51 @@ export async function PATCH(
 
       if (doc.exists) {
         await docRef.set(updateData, { merge: true });
-        return NextResponse.json({
+        firestoreTransaction = {
           id: doc.id,
           ...doc.data(),
           ...updateData,
-        });
+        };
       }
     } catch (err) {
       console.error('Firestore update failed', err);
     }
 
-    const transaction = await prisma.transaction.update({
-      where: { id: params.id },
-      data: {
-        ...(status && { status }),
-        ...(utrNumber !== undefined && { utrNumber: utrNumber || null }),
-        ...(customerName !== undefined && { customerName }),
-        ...(customerPhone !== undefined && { customerPhone: customerPhone || null }),
-        ...(amount !== undefined && { amount: parseFloat(amount) || 0 }),
-        ...(purpose !== undefined && { purpose: purpose || null }),
-        ...(upiTarget && { upiTarget }),
-        ...(status === "PAID" && { paymentDate: new Date() }),
-      },
-    });
-
-    // Update Firestore mirror (best-effort)
+    let transaction: any = null;
     try {
-      const db = getFirestore();
-      await db.collection('transactions').doc(transaction.id).set({
-        ...transaction,
-        paymentDate: transaction.paymentDate ? transaction.paymentDate.toISOString() : null,
-        createdAt: transaction.createdAt.toISOString(),
-        updatedAt: transaction.updatedAt.toISOString(),
-      }, { merge: true });
-    } catch (err) {
-      console.error('Firestore update failed', err);
+      transaction = await prisma.transaction.update({
+        where: { id: params.id },
+        data: {
+          ...(status && { status }),
+          ...(utrNumber !== undefined && { utrNumber: utrNumber || null }),
+          ...(customerName !== undefined && { customerName }),
+          ...(customerPhone !== undefined && { customerPhone: customerPhone || null }),
+          ...(amount !== undefined && { amount: parseFloat(amount) || 0 }),
+          ...(purpose !== undefined && { purpose: purpose || null }),
+          ...(upiTarget && { upiTarget }),
+          ...(status === "PAID" && { paymentDate: new Date() }),
+        },
+      });
+
+      try {
+        const db = getFirestore();
+        await db.collection('transactions').doc(transaction.id).set({
+          ...transaction,
+          paymentDate: transaction.paymentDate ? transaction.paymentDate.toISOString() : null,
+          createdAt: transaction.createdAt.toISOString(),
+          updatedAt: transaction.updatedAt.toISOString(),
+        }, { merge: true });
+      } catch (err) {
+        console.error('Firestore mirror update failed', err);
+      }
+    } catch (error) {
+      console.error("Prisma transaction update failed", error);
     }
 
-    return NextResponse.json(transaction);
+    if (transaction) return NextResponse.json(serializeTransaction(transaction));
+    if (firestoreTransaction) return NextResponse.json(serializeTransaction(firestoreTransaction));
+
+    return new NextResponse("Transaction not found", { status: 404 });
   } catch (error: any) {
     if (error.code === 'P2002' && error.meta?.target?.includes('utrNumber')) {
       return new NextResponse("UTR Number already exists", { status: 400 });

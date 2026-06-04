@@ -31,21 +31,24 @@ export async function POST(req: Request) {
       updatedAt: now.toISOString(),
     };
 
+    let savedTransaction: any = transaction;
+    let saved = false;
+
     try {
       const db = getFirestore();
       await db.collection('transactions').doc(transaction.id).set({
         ...transaction,
         userEmail: session.user?.email || null,
       });
-
-      return NextResponse.json(transaction);
+      saved = true;
     } catch (err) {
       console.error('Firestore write failed', err);
     }
 
     try {
-      const prismaTransaction = await prisma.transaction.create({
+      savedTransaction = await prisma.transaction.create({
         data: {
+          id: transaction.id,
           orderId,
           customerName,
           customerPhone: customerPhone || null,
@@ -55,12 +58,16 @@ export async function POST(req: Request) {
           status: "PENDING",
         },
       });
-
-      return NextResponse.json(prismaTransaction);
+      saved = true;
     } catch (error) {
       console.error("Prisma transaction create failed", error);
-      return NextResponse.json(transaction);
     }
+
+    if (!saved) {
+      return new NextResponse("Failed to create transaction", { status: 500 });
+    }
+
+    return NextResponse.json(savedTransaction);
   } catch (error) {
     return new NextResponse("Internal Error", { status: 500 });
   }
