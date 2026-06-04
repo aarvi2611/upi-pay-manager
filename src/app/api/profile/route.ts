@@ -11,6 +11,7 @@ const profileDocId = "business-profile";
 type ProfileInput = {
   name: string;
   upiId: string;
+  personalUpiId?: string | null;
   phone?: string | null;
   address?: string | null;
 };
@@ -42,6 +43,7 @@ export async function PUT(req: Request) {
     const profile: ProfileInput = {
       name: body.name,
       upiId: body.upiId,
+      personalUpiId: body.personalUpiId || null,
       phone: body.phone || null,
       address: body.address || null,
     };

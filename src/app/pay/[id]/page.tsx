@@ -52,11 +52,16 @@ export default async function PaymentPage({ params }: { params: { id: string } }
   businessProfile = businessProfile || {
     name: "My Store",
     upiId: "merchant@upi",
+    personalUpiId: null,
   };
 
   // Construct UPI URL string
   // upi://pay?pa=upiId&pn=BusinessName&tr=orderId&tn=purpose&am=amount&cu=INR
-  const upiUrl = `upi://pay?pa=${encodeURIComponent(businessProfile.upiId)}&pn=${encodeURIComponent(businessProfile.name)}&tr=${encodeURIComponent(transaction.orderId)}&tn=${encodeURIComponent(transaction.purpose || "Payment")}&am=${transaction.amount}&cu=INR`;
+  const buildUpiUrl = (upiId: string) =>
+    `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(businessProfile.name)}&tr=${encodeURIComponent(transaction.orderId)}&tn=${encodeURIComponent(transaction.purpose || "Payment")}&am=${transaction.amount}&cu=INR`;
+
+  const upiUrl = buildUpiUrl(businessProfile.upiId);
+  const personalUpiUrl = businessProfile.personalUpiId ? buildUpiUrl(businessProfile.personalUpiId) : null;
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 py-12">
@@ -64,6 +69,7 @@ export default async function PaymentPage({ params }: { params: { id: string } }
         transaction={transaction} 
         businessProfile={businessProfile} 
         upiUrl={upiUrl}
+        personalUpiUrl={personalUpiUrl}
       />
     </div>
   );

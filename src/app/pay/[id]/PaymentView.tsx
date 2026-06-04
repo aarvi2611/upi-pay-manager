@@ -4,9 +4,14 @@ import { QRCodeSVG } from "qrcode.react";
 import { AlertCircle, Check, CheckCircle, Copy, CreditCard, ExternalLink, Smartphone } from "lucide-react";
 import { useEffect, useState } from "react";
 
-export default function PaymentView({ transaction, businessProfile, upiUrl }: any) {
+export default function PaymentView({ transaction, businessProfile, upiUrl, personalUpiUrl }: any) {
   const [copied, setCopied] = useState(false);
   const [currentTransaction, setCurrentTransaction] = useState(transaction);
+  const [paymentTarget, setPaymentTarget] = useState<"merchant" | "personal">("merchant");
+  const fallbackUpiId = businessProfile.personalUpiId;
+  const hasFallbackUpi = Boolean(fallbackUpiId && personalUpiUrl);
+  const activeUpiId = paymentTarget === "personal" && hasFallbackUpi ? fallbackUpiId : businessProfile.upiId;
+  const activeUpiUrl = paymentTarget === "personal" && hasFallbackUpi ? personalUpiUrl : upiUrl;
 
   useEffect(() => {
     if (currentTransaction.status !== "PENDING") return;
@@ -32,7 +37,7 @@ export default function PaymentView({ transaction, businessProfile, upiUrl }: an
   }, [currentTransaction.status, transaction.id]);
 
   const copyUpiId = () => {
-    navigator.clipboard.writeText(businessProfile.upiId);
+    navigator.clipboard.writeText(activeUpiId);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -43,6 +48,7 @@ export default function PaymentView({ transaction, businessProfile, upiUrl }: an
     { label: "PhonePe", icon: CreditCard, className: "bg-purple-600 hover:bg-purple-700 text-white" },
     { label: "Paytm", icon: CreditCard, className: "bg-sky-600 hover:bg-sky-700 text-white" },
   ];
+  const isHighValuePayment = currentTransaction.amount >= 2000;
 
   if (currentTransaction.status === "PAID") {
     return (
@@ -104,13 +110,42 @@ export default function PaymentView({ transaction, businessProfile, upiUrl }: an
         <p className="text-4xl font-extrabold">₹{currentTransaction.amount.toFixed(2)}</p>
       </div>
 
+      {isHighValuePayment && (
+        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          For payments of Rs. 2000 or more, scan the QR from your UPI app if direct app opening shows a safety warning.
+        </div>
+      )}
+
+      {hasFallbackUpi && (
+        <div className="mb-6 grid grid-cols-2 gap-2 rounded-lg border border-gray-200 bg-gray-50 p-1">
+          <button
+            type="button"
+            onClick={() => setPaymentTarget("merchant")}
+            className={`rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
+              paymentTarget === "merchant" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-900"
+            }`}
+          >
+            Merchant UPI
+          </button>
+          <button
+            type="button"
+            onClick={() => setPaymentTarget("personal")}
+            className={`rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
+              paymentTarget === "personal" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-900"
+            }`}
+          >
+            Personal UPI
+          </button>
+        </div>
+      )}
+
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {upiApps.map((app) => {
           const Icon = app.icon;
           return (
             <a
               key={app.label}
-              href={upiUrl}
+              href={activeUpiUrl}
               className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-lg px-3 py-2 text-center text-xs font-semibold transition-colors ${app.className}`}
             >
               <Icon size={18} />
@@ -123,7 +158,7 @@ export default function PaymentView({ transaction, businessProfile, upiUrl }: an
       <div className="flex flex-col items-center mb-8">
         <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 inline-block">
           <QRCodeSVG
-            value={upiUrl}
+            value={activeUpiUrl}
             size={220}
             level="H"
             includeMargin={true}
@@ -138,7 +173,7 @@ export default function PaymentView({ transaction, businessProfile, upiUrl }: an
         <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
           <div>
             <p className="text-xs text-gray-500">UPI ID</p>
-            <p className="font-medium text-gray-900 text-sm">{businessProfile.upiId}</p>
+            <p className="font-medium text-gray-900 text-sm">{activeUpiId}</p>
           </div>
           <button
             onClick={copyUpiId}
@@ -149,7 +184,7 @@ export default function PaymentView({ transaction, businessProfile, upiUrl }: an
         </div>
 
         <a
-          href={upiUrl}
+          href={activeUpiUrl}
           className="flex items-center justify-center gap-2 w-full py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors"
         >
           <ExternalLink size={18} /> Open Payment Link

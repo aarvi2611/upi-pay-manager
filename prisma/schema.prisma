@@ -10,7 +10,7 @@ datasource db {
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
-  password  String   // Hashed password
+  password  String // Hashed password
   name      String?
   role      String   @default("ADMIN") // ADMIN, STAFF
   createdAt DateTime @default(now())
@@ -18,27 +18,28 @@ model User {
 }
 
 model BusinessProfile {
-  id        String   @id @default(cuid())
-  name      String
-  upiId     String
-  logoUrl   String?
-  phone     String?
-  address   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(cuid())
+  name          String
+  upiId         String
+  personalUpiId String?
+  logoUrl       String?
+  phone         String?
+  address       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Transaction {
-  id             String    @id @default(cuid())
-  orderId        String    @unique
-  customerName   String
-  customerPhone  String?
-  amount         Float
-  purpose        String?
-  status         String    @default("PENDING") // PENDING, PAID, FAILED, CANCELLED
-  utrNumber      String?   @unique
-  paymentDate    DateTime?
-  proofUrl       String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id            String    @id @default(cuid())
+  orderId       String    @unique
+  customerName  String
+  customerPhone String?
+  amount        Float
+  purpose       String?
+  status        String    @default("PENDING") // PENDING, PAID, FAILED, CANCELLED
+  utrNumber     String?   @unique
+  paymentDate   DateTime?
+  proofUrl      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }

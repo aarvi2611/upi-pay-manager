@@ -8,6 +8,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState({
     name: "",
     upiId: "",
+    personalUpiId: "",
     phone: "",
     address: "",
   });
@@ -20,6 +21,7 @@ export default function ProfilePage() {
           setProfile({
             name: data.name || "",
             upiId: data.upiId || "",
+            personalUpiId: data.personalUpiId || "",
             phone: data.phone || "",
             address: data.address || "",
           });
@@ -72,7 +74,7 @@ export default function ProfilePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Google Pay / UPI ID *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Merchant UPI ID *</label>
             <input
               required
               type="text"
@@ -80,6 +82,17 @@ export default function ProfilePage() {
               className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
               value={profile.upiId}
               onChange={(e) => setProfile({ ...profile, upiId: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Personal UPI ID</label>
+            <input
+              type="text"
+              placeholder="e.g. personal@okaxis"
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              value={profile.personalUpiId}
+              onChange={(e) => setProfile({ ...profile, personalUpiId: e.target.value })}
             />
           </div>
 
