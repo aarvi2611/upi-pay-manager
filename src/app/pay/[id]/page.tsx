@@ -65,17 +65,17 @@ export default async function PaymentPage({ params }: { params: { id: string } }
   const usePersonalUpi = transaction.upiTarget === "PERSONAL" && businessProfile.personalUpiId && personalUpiUrl;
   const selectedUpiId = usePersonalUpi ? businessProfile.personalUpiId : businessProfile.upiId;
   const selectedUpiUrl = usePersonalUpi ? personalUpiUrl : upiUrl;
-  const selectedUpiTarget = usePersonalUpi ? "PERSONAL" : "MERCHANT";
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 py-12">
-      <PaymentView 
-        transaction={transaction} 
-        businessProfile={businessProfile} 
-        upiUrl={selectedUpiUrl}
-        selectedUpiId={selectedUpiId}
-        selectedUpiTarget={selectedUpiTarget}
-      />
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#eef6ff,transparent_34%),linear-gradient(180deg,#f8fbff_0%,#eef4fb_100%)] px-4 py-8 sm:py-12">
+      <div className="mx-auto flex min-h-[calc(100vh-4rem)] items-center justify-center">
+        <PaymentView
+          transaction={transaction}
+          businessProfile={businessProfile}
+          upiUrl={selectedUpiUrl}
+          selectedUpiId={selectedUpiId}
+        />
+      </div>
     </div>
   );
 }
