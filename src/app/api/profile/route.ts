@@ -16,6 +16,10 @@ type ProfileInput = {
   address?: string | null;
 };
 
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
 async function saveProfileToPrisma(profile: ProfileInput) {
   const existing = await prisma.businessProfile.findFirst();
 
@@ -82,6 +86,7 @@ export async function PUT(req: Request) {
     };
     let savedProfile: any = profile;
     let saved = false;
+    const failures: string[] = [];
 
     try {
       const db = getFirestore();
@@ -96,6 +101,7 @@ export async function PUT(req: Request) {
 
     } catch (error) {
       console.error("Failed to save Firestore business profile", error);
+      failures.push(`Firestore: ${errorMessage(error)}`);
     }
 
     try {
@@ -103,10 +109,17 @@ export async function PUT(req: Request) {
       saved = true;
     } catch (error) {
       console.error("Failed to save Prisma business profile", error);
+      failures.push(`Database: ${errorMessage(error)}`);
     }
 
     if (!saved) {
-      return new NextResponse("Failed to save business profile", { status: 500 });
+      return NextResponse.json(
+        {
+          error: "Failed to save business profile",
+          details: failures,
+        },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json(savedProfile);

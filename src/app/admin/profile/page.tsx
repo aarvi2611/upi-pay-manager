@@ -41,10 +41,20 @@ export default function ProfilePage() {
         body: JSON.stringify(profile),
       });
 
-      if (!res.ok) throw new Error("Failed to update profile");
+      if (!res.ok) {
+        const contentType = res.headers.get("content-type") || "";
+        const errorBody = contentType.includes("application/json")
+          ? await res.json()
+          : await res.text();
+        const detail = typeof errorBody === "string"
+          ? errorBody
+          : [errorBody.error, ...(errorBody.details || [])].filter(Boolean).join(" | ");
+
+        throw new Error(detail || "Failed to update profile");
+      }
       setMessage("Profile updated successfully!");
     } catch (error) {
-      setMessage("Error updating profile.");
+      setMessage(`Error updating profile: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setLoading(false);
     }
