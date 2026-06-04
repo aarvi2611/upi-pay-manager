@@ -36,6 +36,7 @@ model Transaction {
   customerPhone String?
   amount        Float
   purpose       String?
+  upiTarget     String    @default("MERCHANT")
   status        String    @default("PENDING") // PENDING, PAID, FAILED, CANCELLED
   utrNumber     String?   @unique
   paymentDate   DateTime?

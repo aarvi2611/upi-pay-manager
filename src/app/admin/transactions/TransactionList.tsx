@@ -165,6 +165,9 @@ export default function TransactionList({
               <tr key={tx.id} className="border-b last:border-0 hover:bg-gray-50">
                 <td className="px-6 py-4">
                   <div className="font-medium text-gray-900">{tx.orderId}</div>
+                  <div className="mt-1 text-[11px] font-medium uppercase tracking-wide text-gray-400">
+                    {tx.upiTarget === "PERSONAL" ? "Personal UPI" : "Merchant UPI"}
+                  </div>
                   <div className="flex gap-2 mt-1">
                     <button onClick={() => copyLink(tx.id)} className="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-xs">
                       <Copy size={12} /> Copy Link

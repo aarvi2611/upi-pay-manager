@@ -4,14 +4,11 @@ import { QRCodeSVG } from "qrcode.react";
 import { AlertCircle, Check, CheckCircle, Copy, CreditCard, ExternalLink, Smartphone } from "lucide-react";
 import { useEffect, useState } from "react";
 
-export default function PaymentView({ transaction, businessProfile, upiUrl, personalUpiUrl }: any) {
+export default function PaymentView({ transaction, businessProfile, upiUrl, selectedUpiId, selectedUpiTarget }: any) {
   const [copied, setCopied] = useState(false);
   const [currentTransaction, setCurrentTransaction] = useState(transaction);
-  const [paymentTarget, setPaymentTarget] = useState<"merchant" | "personal">("merchant");
-  const fallbackUpiId = businessProfile.personalUpiId;
-  const hasFallbackUpi = Boolean(fallbackUpiId && personalUpiUrl);
-  const activeUpiId = paymentTarget === "personal" && hasFallbackUpi ? fallbackUpiId : businessProfile.upiId;
-  const activeUpiUrl = paymentTarget === "personal" && hasFallbackUpi ? personalUpiUrl : upiUrl;
+  const activeUpiId = selectedUpiId || businessProfile.upiId;
+  const activeUpiUrl = upiUrl;
 
   useEffect(() => {
     if (currentTransaction.status !== "PENDING") return;
@@ -116,29 +113,6 @@ export default function PaymentView({ transaction, businessProfile, upiUrl, pers
         </div>
       )}
 
-      {hasFallbackUpi && (
-        <div className="mb-6 grid grid-cols-2 gap-2 rounded-lg border border-gray-200 bg-gray-50 p-1">
-          <button
-            type="button"
-            onClick={() => setPaymentTarget("merchant")}
-            className={`rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
-              paymentTarget === "merchant" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-900"
-            }`}
-          >
-            Merchant UPI
-          </button>
-          <button
-            type="button"
-            onClick={() => setPaymentTarget("personal")}
-            className={`rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
-              paymentTarget === "personal" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-900"
-            }`}
-          >
-            Personal UPI
-          </button>
-        </div>
-      )}
-
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {upiApps.map((app) => {
           const Icon = app.icon;
@@ -174,6 +148,9 @@ export default function PaymentView({ transaction, businessProfile, upiUrl, pers
           <div>
             <p className="text-xs text-gray-500">UPI ID</p>
             <p className="font-medium text-gray-900 text-sm">{activeUpiId}</p>
+            {selectedUpiTarget === "PERSONAL" && (
+              <p className="mt-1 text-xs text-blue-600">Alternate payment account</p>
+            )}
           </div>
           <button
             onClick={copyUpiId}

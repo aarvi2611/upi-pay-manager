@@ -1,17 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function NewTransactionPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [profile, setProfile] = useState({ upiId: "", personalUpiId: "" });
   const [formData, setFormData] = useState({
     customerName: "",
     customerPhone: "",
     amount: "",
     purpose: "",
+    upiTarget: "MERCHANT",
   });
+
+  useEffect(() => {
+    fetch("/api/profile")
+      .then((res) => res.json())
+      .then((data) => {
+        setProfile({
+          upiId: data?.upiId || "",
+          personalUpiId: data?.personalUpiId || "",
+        });
+      })
+      .catch((error) => console.error("Failed to load business profile", error));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,8 +41,8 @@ export default function NewTransactionPage() {
       if (!res.ok) throw new Error("Failed to create transaction");
       
       const data = await res.json();
-      router.push(`/admin/transactions`);
-      // You could also redirect to /pay/${data.id} to view it
+      router.push(`/admin/transactions?created=${data.id}`);
+      router.refresh();
     } catch (error) {
       console.error(error);
       alert("Error creating transaction");
@@ -76,6 +90,39 @@ export default function NewTransactionPage() {
               value={formData.amount}
               onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Receive Payment In</label>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, upiTarget: "MERCHANT" })}
+                className={`rounded-lg border px-4 py-3 text-left transition-colors ${
+                  formData.upiTarget === "MERCHANT"
+                    ? "border-blue-500 bg-blue-50 text-blue-900"
+                    : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                <span className="block text-sm font-semibold">Merchant UPI</span>
+                <span className="mt-1 block text-xs text-gray-500">{profile.upiId || "Configured merchant UPI"}</span>
+              </button>
+              <button
+                type="button"
+                disabled={!profile.personalUpiId}
+                onClick={() => setFormData({ ...formData, upiTarget: "PERSONAL" })}
+                className={`rounded-lg border px-4 py-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                  formData.upiTarget === "PERSONAL"
+                    ? "border-blue-500 bg-blue-50 text-blue-900"
+                    : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                <span className="block text-sm font-semibold">Personal UPI</span>
+                <span className="mt-1 block text-xs text-gray-500">
+                  {profile.personalUpiId || "Add personal UPI in profile first"}
+                </span>
+              </button>
+            </div>
           </div>
 
           <div>

@@ -58,6 +58,7 @@ export async function PATCH(
   try {
     const body = await req.json();
     const { status, utrNumber, customerName, customerPhone, amount, purpose } = body;
+    const upiTarget = body.upiTarget === "PERSONAL" ? "PERSONAL" : body.upiTarget === "MERCHANT" ? "MERCHANT" : undefined;
     const updatedAt = new Date();
     const updateData = {
       ...(status && { status }),
@@ -66,6 +67,7 @@ export async function PATCH(
       ...(customerPhone !== undefined && { customerPhone: customerPhone || null }),
       ...(amount !== undefined && { amount: parseFloat(amount) || 0 }),
       ...(purpose !== undefined && { purpose: purpose || null }),
+      ...(upiTarget && { upiTarget }),
       ...(status === "PAID" && { paymentDate: updatedAt.toISOString() }),
       updatedAt: updatedAt.toISOString(),
     };
@@ -96,6 +98,7 @@ export async function PATCH(
         ...(customerPhone !== undefined && { customerPhone: customerPhone || null }),
         ...(amount !== undefined && { amount: parseFloat(amount) || 0 }),
         ...(purpose !== undefined && { purpose: purpose || null }),
+        ...(upiTarget && { upiTarget }),
         ...(status === "PAID" && { paymentDate: new Date() }),
       },
     });

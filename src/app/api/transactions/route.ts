@@ -11,6 +11,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { customerName, customerPhone, amount, purpose } = body;
+    const upiTarget = body.upiTarget === "PERSONAL" ? "PERSONAL" : "MERCHANT";
 
     const orderId = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const now = new Date();
@@ -21,6 +22,7 @@ export async function POST(req: Request) {
       customerPhone: customerPhone || null,
       amount: parseFloat(amount),
       purpose: purpose || null,
+      upiTarget,
       status: "PENDING",
       utrNumber: null,
       paymentDate: null,
@@ -49,6 +51,7 @@ export async function POST(req: Request) {
           customerPhone: customerPhone || null,
           amount: parseFloat(amount),
           purpose: purpose || null,
+          upiTarget,
           status: "PENDING",
         },
       });

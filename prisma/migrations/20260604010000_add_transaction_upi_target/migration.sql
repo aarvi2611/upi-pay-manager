@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Transaction" ADD COLUMN "upiTarget" TEXT NOT NULL DEFAULT 'MERCHANT';
