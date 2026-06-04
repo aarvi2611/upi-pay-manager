@@ -1,12 +1,6 @@
 import admin from 'firebase-admin';
 
-let app: admin.app.App | null = null;
-
 function initFirebaseAdmin() {
-  if (admin.apps.length) {
-    return admin.app();
-  }
-
   const key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
   if (!key) throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY is not set');
 
@@ -21,15 +15,17 @@ function initFirebaseAdmin() {
     throw new Error('Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY as JSON or base64 JSON: ' + e);
   }
 
-  app = admin.initializeApp({
-    credential: admin.credential.cert(serviceAccountJson),
-    projectId: process.env.FIREBASE_PROJECT_ID || serviceAccountJson.project_id,
-  });
+  const projectId = process.env.FIREBASE_PROJECT_ID || serviceAccountJson.project_id;
+  const appName = `upi-pay-manager-${projectId}`;
+  const existingApp = admin.apps.find((firebaseApp) => firebaseApp?.name === appName);
+  if (existingApp) return existingApp;
 
-  return app;
+  return admin.initializeApp({
+    credential: admin.credential.cert(serviceAccountJson),
+    projectId,
+  }, appName);
 }
 
 export function getFirestore() {
-  if (!admin.apps.length) initFirebaseAdmin();
-  return admin.firestore();
+  return admin.firestore(initFirebaseAdmin());
 }
