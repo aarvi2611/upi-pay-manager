@@ -1,20 +1,47 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { format } from "date-fns";
-import { CheckCircle, Copy, Edit, ExternalLink, Save, Trash2, X, XCircle } from "lucide-react";
+import { QRCodeCanvas } from "qrcode.react";
+import { CheckCircle, Copy, Download, Edit, ExternalLink, QrCode, Save, Trash2, X, XCircle } from "lucide-react";
+
+export type TransactionListItem = {
+  id: string;
+  orderId: string;
+  customerName: string;
+  customerPhone: string | null;
+  amount: number;
+  purpose: string | null;
+  upiTarget: string;
+  status: string;
+  utrNumber: string | null;
+  paymentDate: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+type EditableTransaction = Omit<TransactionListItem, "amount"> & {
+  amount: string;
+};
 
 export default function TransactionList({
   initialData,
   publicBaseUrl,
+  businessProfile,
 }: {
-  initialData: any[];
+  initialData: TransactionListItem[];
   publicBaseUrl: string;
+  businessProfile: {
+    name: string;
+    phone?: string | null;
+  };
 }) {
   const [transactions, setTransactions] = useState(initialData);
   const [filter, setFilter] = useState("ALL");
   const [searchTerm, setSearchTerm] = useState("");
-  const [editingTransaction, setEditingTransaction] = useState<any | null>(null);
+  const [editingTransaction, setEditingTransaction] = useState<EditableTransaction | null>(null);
+  const [qrTransaction, setQrTransaction] = useState<TransactionListItem | null>(null);
+  const qrCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const filteredData = transactions.filter((tx) => {
     const matchesFilter = filter === "ALL" || tx.status === filter;
@@ -45,7 +72,7 @@ export default function TransactionList({
 
       const updated = await res.json();
       setTransactions((prev) => prev.map((t) => (t.id === id ? updated : t)));
-    } catch (error) {
+    } catch {
       alert("Failed to update status");
     }
   };
@@ -76,7 +103,7 @@ export default function TransactionList({
       const updated = await res.json();
       setTransactions((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
       setEditingTransaction(null);
-    } catch (error) {
+    } catch {
       alert("Failed to edit transaction");
     }
   };
@@ -96,7 +123,7 @@ export default function TransactionList({
       }
 
       setTransactions((prev) => prev.filter((tx) => tx.id !== id));
-    } catch (error) {
+    } catch {
       alert("Failed to delete transaction");
     }
   };
@@ -116,6 +143,116 @@ export default function TransactionList({
     const link = makePaymentLink(id);
     navigator.clipboard.writeText(link);
     alert("Payment link copied!");
+  };
+
+  const downloadQrCard = () => {
+    if (!qrTransaction || !qrCanvasRef.current) return;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 1080;
+    canvas.height = 1400;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const amount = Number(qrTransaction.amount || 0).toFixed(2);
+    const businessName = businessProfile.name || "Axienta Business Consulting";
+
+    ctx.fillStyle = "#f8fafc";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const drawRoundRect = (x: number, y: number, width: number, height: number, radius: number) => {
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+    };
+
+    const wrapText = (text: string, x: number, y: number, maxWidth: number, lineHeight: number, maxLines = 2) => {
+      const words = text.split(" ");
+      let line = "";
+      let lines = 0;
+
+      words.forEach((word, index) => {
+        const testLine = line ? `${line} ${word}` : word;
+        if (ctx.measureText(testLine).width > maxWidth && line) {
+          if (lines < maxLines) ctx.fillText(line, x, y + lines * lineHeight);
+          lines += 1;
+          line = word;
+        } else {
+          line = testLine;
+        }
+
+        if (index === words.length - 1 && lines < maxLines) {
+          ctx.fillText(line, x, y + lines * lineHeight);
+        }
+      });
+    };
+
+    const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+    gradient.addColorStop(0, "#2563eb");
+    gradient.addColorStop(1, "#0f172a");
+    ctx.fillStyle = gradient;
+    drawRoundRect(70, 70, 940, 1260, 46);
+    ctx.fill();
+
+    ctx.fillStyle = "#ffffff";
+    drawRoundRect(110, 110, 860, 1180, 36);
+    ctx.fill();
+
+    ctx.fillStyle = "#dbeafe";
+    drawRoundRect(150, 150, 780, 150, 26);
+    ctx.fill();
+
+    ctx.fillStyle = "#1d4ed8";
+    ctx.font = "700 42px Arial";
+    ctx.textAlign = "center";
+    wrapText(businessName, 540, 215, 700, 48, 2);
+
+    ctx.fillStyle = "#64748b";
+    ctx.font = "500 26px Arial";
+    ctx.fillText("Secure Payment QR", 540, 275);
+
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "800 84px Arial";
+    ctx.fillText(`Rs. ${amount}`, 540, 405);
+
+    ctx.fillStyle = "#475569";
+    ctx.font = "500 30px Arial";
+    ctx.fillText(`Order: ${qrTransaction.orderId}`, 540, 455);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.shadowColor = "rgba(15, 23, 42, 0.14)";
+    ctx.shadowBlur = 34;
+    ctx.shadowOffsetY = 18;
+    drawRoundRect(225, 515, 630, 630, 34);
+    ctx.fill();
+    ctx.shadowColor = "transparent";
+    ctx.drawImage(qrCanvasRef.current, 285, 575, 510, 510);
+
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "700 34px Arial";
+    ctx.fillText("Scan to open payment link", 540, 1210);
+
+    ctx.fillStyle = "#64748b";
+    ctx.font = "500 24px Arial";
+    wrapText(`Customer: ${qrTransaction.customerName}`, 540, 1252, 760, 30, 1);
+    if (qrTransaction.purpose) {
+      wrapText(`Note: ${qrTransaction.purpose}`, 540, 1288, 760, 30, 1);
+    } else if (businessProfile.phone) {
+      wrapText(`Contact: ${businessProfile.phone}`, 540, 1288, 760, 30, 1);
+    }
+
+    const linkElement = document.createElement("a");
+    linkElement.href = canvas.toDataURL("image/png");
+    linkElement.download = `payment-qr-${qrTransaction.orderId || qrTransaction.id}.png`;
+    linkElement.click();
   };
 
   return (
@@ -172,6 +309,9 @@ export default function TransactionList({
                     <button onClick={() => copyLink(tx.id)} className="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-xs">
                       <Copy size={12} /> Copy Link
                     </button>
+                    <button onClick={() => setQrTransaction(tx)} className="text-emerald-600 hover:text-emerald-800 flex items-center gap-1 text-xs">
+                      <QrCode size={12} /> QR Code
+                    </button>
                     <a href={makePaymentLink(tx.id)} target="_blank" className="text-gray-600 hover:text-gray-800 flex items-center gap-1 text-xs">
                       <ExternalLink size={12} /> View
                     </a>
@@ -194,7 +334,7 @@ export default function TransactionList({
                   {tx.utrNumber && <div className="text-[10px] text-gray-500 mt-1">UTR: {tx.utrNumber}</div>}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  {format(new Date(tx.createdAt), 'dd MMM yyyy, HH:mm')}
+                  {tx.createdAt ? format(new Date(tx.createdAt), 'dd MMM yyyy, HH:mm') : "N/A"}
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex flex-wrap gap-2">
@@ -330,6 +470,56 @@ export default function TransactionList({
                 className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
               >
                 <Save size={16} /> Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {qrTransaction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Professional QR Code</h2>
+                <p className="text-sm text-gray-500">Download and send this payment QR to your client.</p>
+              </div>
+              <button
+                onClick={() => setQrTransaction(null)}
+                className="rounded p-1 text-gray-500 hover:bg-gray-100"
+                title="Close"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 text-center">
+              <p className="text-sm font-semibold text-gray-900">{businessProfile.name}</p>
+              <p className="mt-1 text-3xl font-extrabold text-blue-700">Rs. {Number(qrTransaction.amount || 0).toFixed(2)}</p>
+              <p className="mt-1 text-xs text-gray-500">Order: {qrTransaction.orderId}</p>
+              <div className="mx-auto mt-4 flex w-fit rounded-xl bg-white p-3 shadow-sm">
+                <QRCodeCanvas
+                  ref={qrCanvasRef}
+                  value={makePaymentLink(qrTransaction.id)}
+                  size={260}
+                  level="H"
+                  marginSize={4}
+                />
+              </div>
+              <p className="mt-3 text-xs text-gray-500">Client scans this QR to open the secure payment page.</p>
+            </div>
+
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+              <button
+                onClick={() => copyLink(qrTransaction.id)}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-md border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                <Copy size={16} /> Copy Link
+              </button>
+              <button
+                onClick={downloadQrCard}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                <Download size={16} /> Download PNG
               </button>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import TransactionList from "./TransactionList";
+import type { TransactionListItem } from "./TransactionList";
 import { getFirestore } from '@/lib/firebaseAdmin';
 import { getPublicBaseUrl } from "@/lib/publicUrl";
 import { headers } from "next/headers";
@@ -10,7 +11,37 @@ export const dynamic = "force-dynamic";
 export default async function TransactionsPage() {
   const publicBaseUrl = getPublicBaseUrl(headers());
 
-  const transactionMap = new Map<string, any>();
+  const transactionMap = new Map<string, TransactionListItem>();
+  let businessProfile = {
+    name: "Axienta Business Consulting",
+    phone: "",
+  };
+
+  try {
+    const db = getFirestore();
+    const doc = await db.collection("settings").doc("business-profile").get();
+    const data = doc.exists ? doc.data() : null;
+    if (data) {
+      businessProfile = {
+        name: data.name || businessProfile.name,
+        phone: data.phone || "",
+      };
+    }
+  } catch (err) {
+    console.error("Failed to read Firestore business profile", err);
+  }
+
+  try {
+    const profile = await prisma.businessProfile.findFirst();
+    if (profile) {
+      businessProfile = {
+        name: profile.name || businessProfile.name,
+        phone: profile.phone || businessProfile.phone,
+      };
+    }
+  } catch (err) {
+    console.error("Failed to read Prisma business profile", err);
+  }
 
   try {
     const db = getFirestore();
@@ -43,9 +74,18 @@ export default async function TransactionsPage() {
 
     prismaTransactions.forEach((tx) => {
       if (transactionMap.has(tx.id)) return;
+      const transactionWithUpiTarget = tx as typeof tx & { upiTarget?: string };
 
       transactionMap.set(tx.id, {
-        ...tx,
+        id: tx.id,
+        orderId: tx.orderId,
+        customerName: tx.customerName,
+        customerPhone: tx.customerPhone,
+        amount: tx.amount,
+        purpose: tx.purpose,
+        upiTarget: transactionWithUpiTarget.upiTarget || "MERCHANT",
+        status: tx.status,
+        utrNumber: tx.utrNumber,
         paymentDate: tx.paymentDate ? toDate(tx.paymentDate).toISOString() : null,
         createdAt: tx.createdAt ? toDate(tx.createdAt).toISOString() : null,
         updatedAt: tx.updatedAt ? toDate(tx.updatedAt).toISOString() : null,
@@ -66,7 +106,7 @@ export default async function TransactionsPage() {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Transactions</h1>
       </div>
-      <TransactionList initialData={transactions} publicBaseUrl={publicBaseUrl} />
+      <TransactionList initialData={transactions} publicBaseUrl={publicBaseUrl} businessProfile={businessProfile} />
     </div>
   );
 }
