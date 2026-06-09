@@ -33,6 +33,8 @@ export default function TransactionList({
   publicBaseUrl: string;
   businessProfile: {
     name: string;
+    upiId: string;
+    personalUpiId?: string | null;
     phone?: string | null;
   };
 }) {
@@ -139,6 +141,24 @@ export default function TransactionList({
 
   const makePaymentLink = (id: string) => `${publicBaseUrl}/pay/${id}`;
 
+  const getPaymentUpiId = (tx: TransactionListItem) => {
+    if (tx.upiTarget === "PERSONAL" && businessProfile.personalUpiId) {
+      return businessProfile.personalUpiId;
+    }
+
+    return businessProfile.upiId;
+  };
+
+  const makeUpiPaymentUri = (tx: TransactionListItem) => {
+    const upiId = getPaymentUpiId(tx);
+    const amount = Number(tx.amount || 0).toFixed(2);
+    const note = tx.purpose || `Payment ${tx.orderId}`;
+
+    return `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(
+      businessProfile.name || "Merchant"
+    )}&tn=${encodeURIComponent(note)}&am=${amount}&cu=INR`;
+  };
+
   const copyLink = (id: string) => {
     const link = makePaymentLink(id);
     navigator.clipboard.writeText(link);
@@ -147,6 +167,11 @@ export default function TransactionList({
 
   const downloadQrCard = () => {
     if (!qrTransaction || !qrCanvasRef.current) return;
+    const paymentUpiId = getPaymentUpiId(qrTransaction);
+    if (!paymentUpiId) {
+      alert("UPI ID is not configured. Please add it in Business Profile first.");
+      return;
+    }
 
     const canvas = document.createElement("canvas");
     canvas.width = 1080;
@@ -217,7 +242,7 @@ export default function TransactionList({
 
     ctx.fillStyle = "#64748b";
     ctx.font = "500 26px Arial";
-    ctx.fillText("Secure Payment QR", 540, 275);
+    ctx.fillText("Direct UPI Payment QR", 540, 275);
 
     ctx.fillStyle = "#0f172a";
     ctx.font = "800 84px Arial";
@@ -238,15 +263,15 @@ export default function TransactionList({
 
     ctx.fillStyle = "#0f172a";
     ctx.font = "700 34px Arial";
-    ctx.fillText("Scan to open payment link", 540, 1210);
+    ctx.fillText("Scan with any UPI app", 540, 1210);
 
     ctx.fillStyle = "#64748b";
     ctx.font = "500 24px Arial";
-    wrapText(`Customer: ${qrTransaction.customerName}`, 540, 1252, 760, 30, 1);
+    wrapText(`UPI ID: ${paymentUpiId}`, 540, 1252, 760, 30, 1);
     if (qrTransaction.purpose) {
       wrapText(`Note: ${qrTransaction.purpose}`, 540, 1288, 760, 30, 1);
-    } else if (businessProfile.phone) {
-      wrapText(`Contact: ${businessProfile.phone}`, 540, 1288, 760, 30, 1);
+    } else {
+      wrapText(`Customer: ${qrTransaction.customerName}`, 540, 1288, 760, 30, 1);
     }
 
     const linkElement = document.createElement("a");
@@ -481,7 +506,7 @@ export default function TransactionList({
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Professional QR Code</h2>
-                <p className="text-sm text-gray-500">Download and send this payment QR to your client.</p>
+                <p className="text-sm text-gray-500">Download and send this direct UPI payment QR to your client.</p>
               </div>
               <button
                 onClick={() => setQrTransaction(null)}
@@ -496,27 +521,44 @@ export default function TransactionList({
               <p className="text-sm font-semibold text-gray-900">{businessProfile.name}</p>
               <p className="mt-1 text-3xl font-extrabold text-blue-700">Rs. {Number(qrTransaction.amount || 0).toFixed(2)}</p>
               <p className="mt-1 text-xs text-gray-500">Order: {qrTransaction.orderId}</p>
-              <div className="mx-auto mt-4 flex w-fit rounded-xl bg-white p-3 shadow-sm">
-                <QRCodeCanvas
-                  ref={qrCanvasRef}
-                  value={makePaymentLink(qrTransaction.id)}
-                  size={260}
-                  level="H"
-                  marginSize={4}
-                />
-              </div>
-              <p className="mt-3 text-xs text-gray-500">Client scans this QR to open the secure payment page.</p>
+              <p className="mt-1 text-xs text-gray-500">UPI: {getPaymentUpiId(qrTransaction) || "Not configured"}</p>
+              {getPaymentUpiId(qrTransaction) ? (
+                <>
+                  <div className="mx-auto mt-4 flex w-fit rounded-xl bg-white p-3 shadow-sm">
+                    <QRCodeCanvas
+                      ref={qrCanvasRef}
+                      value={makeUpiPaymentUri(qrTransaction)}
+                      size={260}
+                      level="H"
+                      marginSize={4}
+                    />
+                  </div>
+                  <p className="mt-3 text-xs text-gray-500">Client scans this QR in any UPI app to pay directly.</p>
+                </>
+              ) : (
+                <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+                  UPI ID missing. Add merchant or personal UPI in Business Profile first.
+                </div>
+              )}
             </div>
 
             <div className="mt-5 flex flex-col gap-3 sm:flex-row">
               <button
-                onClick={() => copyLink(qrTransaction.id)}
+                onClick={() => {
+                  if (!getPaymentUpiId(qrTransaction)) {
+                    alert("UPI ID is not configured. Please add it in Business Profile first.");
+                    return;
+                  }
+                  navigator.clipboard.writeText(makeUpiPaymentUri(qrTransaction));
+                  alert("UPI payment QR data copied!");
+                }}
                 className="inline-flex flex-1 items-center justify-center gap-2 rounded-md border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
-                <Copy size={16} /> Copy Link
+                <Copy size={16} /> Copy UPI Data
               </button>
               <button
                 onClick={downloadQrCard}
+                disabled={!getPaymentUpiId(qrTransaction)}
                 className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
               >
                 <Download size={16} /> Download PNG

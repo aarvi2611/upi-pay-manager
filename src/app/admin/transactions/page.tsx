@@ -14,6 +14,8 @@ export default async function TransactionsPage() {
   const transactionMap = new Map<string, TransactionListItem>();
   let businessProfile = {
     name: "Axienta Business Consulting",
+    upiId: "",
+    personalUpiId: "",
     phone: "",
   };
 
@@ -24,6 +26,8 @@ export default async function TransactionsPage() {
     if (data) {
       businessProfile = {
         name: data.name || businessProfile.name,
+        upiId: data.upiId || "",
+        personalUpiId: data.personalUpiId || "",
         phone: data.phone || "",
       };
     }
@@ -36,6 +40,8 @@ export default async function TransactionsPage() {
     if (profile) {
       businessProfile = {
         name: profile.name || businessProfile.name,
+        upiId: profile.upiId || businessProfile.upiId,
+        personalUpiId: profile.personalUpiId || businessProfile.personalUpiId,
         phone: profile.phone || businessProfile.phone,
       };
     }
